@@ -26,12 +26,20 @@ class ApiCrudCommand extends Command
         $this->info('Creating magic... 🪄');
 
         $this->createModel();
+
         $this->createController();
+
         $this->createRequests();
+
         $this->modifyMigration();
+
         $this->createResource();
+
         $this->modifyRepository();
-        $this->createFactory();
+        $this->info('Repository created successfully! ✅');
+
+        $this->createFactory();;
+
         $this->addRoutes();
 
         $this->comment('Api Make Successful');
@@ -69,10 +77,10 @@ class ApiCrudCommand extends Command
     protected function createRequests()
     {
         $name = $this->argument('name');
-        $this->call('make:request', ['name' => "Store{$name}Request"]);
-        $this->call('make:request', ['name' => "Update{$name}Request"]);
+        $this->call('make:request', ['name' => "{$name}StoreRequest"]);
+        $this->call('make:request', ['name' => "{$name}UpdateRequest"]);
 
-        $storeRequestPath = app_path("Http/Requests/Store{$name}Request.php");
+        $storeRequestPath = app_path("Http/Requests/{$name}StoreRequest.php");
         $storeRequestContent = <<<EOT
             <?php
 
@@ -112,7 +120,7 @@ class ApiCrudCommand extends Command
 
         file_put_contents($storeRequestPath, $storeRequestContent);
 
-        $updateRequestPath = app_path("Http/Requests/Update{$name}Request.php");
+        $updateRequestPath = app_path("Http/Requests/{$name}UpdateRequest.php");
         $updateRequestContent = <<<EOT
             <?php
 
@@ -156,6 +164,7 @@ class ApiCrudCommand extends Command
     protected function createController()
     {
         $name = $this->argument('name');
+        $this->call('make:controller', ['name' => "Store{$name}Request"]);
 
         $controllerPath = app_path("Http/Controllers/Api/{$name}Controller.php");
 
@@ -310,6 +319,7 @@ class ApiCrudCommand extends Command
     protected function modifyMigration()
     {
         $name = $this->argument('name');
+        $this->call('make:migration', ['name' => "create_{$name}_table"]);
         $name = Str::snake($name);
         $name = Str::plural($name);
         $migration = database_path('migrations/'.date('Y_m_d_His').'_create_'.$name.'_table.php');
@@ -329,8 +339,9 @@ class ApiCrudCommand extends Command
                 public function up()
                 {
                     Schema::create('{$name}', function (Blueprint \$table) {
-                        \$table->id('');
+                        \$table->uuid('id')->primary();
                         // Add your columns here
+
                         \$table->softDeletes();
                         \$table->timestamps();
                     });
@@ -352,6 +363,7 @@ class ApiCrudCommand extends Command
     protected function createResource()
     {
         $name = $this->argument('name');
+        $this->call('make:resource', ['name' => "{$name}Resource"]);
         $resource = app_path("Http/Resources/{$name}Resource.php");
 
         $resourceContent = <<<EOT
@@ -360,7 +372,7 @@ class ApiCrudCommand extends Command
             namespace App\Http\Resources;
 
             use Illuminate\Http\Resources\Json\JsonResource;
-            use Vinkla\Hashids\Facades\Hashids;
+            use App\Helpers\HashidsHelper; // Menggunakan HashidsHelper yang sudah ada
 
             class {$name}Resource extends JsonResource
             {
@@ -373,10 +385,11 @@ class ApiCrudCommand extends Command
                 public function toArray(\$request)
                 {
                     return [
-                        'id' => Hashids::encode(\$this->id),
+                        'id' => HashidsHelper::encodeId(\$this->id),
                         // Add your columns here
                         'created_at' => \$this->created_at,
                         'updated_at' => \$this->updated_at,
+                        'deleted_at' => \$this->deleted_at,
                     ];
                 }
             }
@@ -385,25 +398,10 @@ class ApiCrudCommand extends Command
         file_put_contents($resource, $resourceContent);
     }
 
-    protected function modifyRepository()
-    {
-        $name = $this->argument('name');
-        $interfacePath = app_path("Interfaces/{$name}RepositoryInterface.php");
-        $repositoryPath = app_path("Repositories/{$name}Repository.php");
-
-        $interfaceContent = $this->generateInterfaceContent($name);
-
-        $repositoryContent = $this->generateRepositoryContent($name);
-
-        file_put_contents($interfacePath, $interfaceContent);
-        file_put_contents($repositoryPath, $repositoryContent);
-
-        $this->updateRepositoryServiceProvider($name);
-    }
-
     protected function createFactory()
     {
         $name = $this->argument('name');
+        $this->call('make:factory', ['name' => "{$name}Factory"]);
         $factory = database_path("factories/{$name}Factory.php");
 
         $factoryContent = <<<EOT
@@ -431,6 +429,22 @@ class ApiCrudCommand extends Command
             EOT;
 
         file_put_contents($factory, $factoryContent);
+    }
+
+    protected function modifyRepository()
+    {
+        $name = $this->argument('name');
+        $interfacePath = app_path("Interfaces/{$name}RepositoryInterface.php");
+        $repositoryPath = app_path("Repositories/{$name}Repository.php");
+
+        $interfaceContent = $this->generateInterfaceContent($name);
+
+        $repositoryContent = $this->generateRepositoryContent($name);
+
+        file_put_contents($interfacePath, $interfaceContent);
+        file_put_contents($repositoryPath, $repositoryContent);
+
+        $this->updateRepositoryServiceProvider($name);
     }
 
     protected function generateInterfaceContent($name)
@@ -645,9 +659,9 @@ class ApiCrudCommand extends Command
         $name = $this->argument('name');
 
         $name = Str::kebab($name);
-        $routes = base_path('routes/admin.php');
+        $routes = base_path('routes/api.php');
 
-        $routeContent = "\nRoute::Apiresource('{$name}', App\Http\Controllers\Web\Admin\\{$this->argument('name')}Controller::class);";
+        $routeContent = "\nRoute::Apiresource('{$name}', App\Http\Controllers\Web\Api\\{$this->argument('name')}Controller::class);";
 
         file_put_contents($routes, $routeContent, FILE_APPEND);
     }

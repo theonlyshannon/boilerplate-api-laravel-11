@@ -11,10 +11,14 @@ class RepositoryServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function register()
-    {
+    public function register() {
 
+        
+    $this->app->bind(\App\Interfaces\ExampleRepositoryInterface::class, \App\Repositories\ExampleRepository::class);
     }
+
+
+
 
     /**
      * Bootstrap services.
@@ -23,6 +27,6 @@ class RepositoryServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+
     }
 }

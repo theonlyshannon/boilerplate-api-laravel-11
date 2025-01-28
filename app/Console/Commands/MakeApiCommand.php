@@ -79,7 +79,7 @@ class MakeApiCommand extends Command
 
             use Illuminate\Foundation\Http\FormRequest;
 
-            class Store{$name}Request extends FormRequest
+            class {$name}StoreRequest extends FormRequest
             {
                 /**
                  * Get the validation rules that apply to the request.
@@ -119,7 +119,7 @@ class MakeApiCommand extends Command
 
             use Illuminate\Foundation\Http\FormRequest;
 
-            class Update{$name}Request extends FormRequest
+            class {$name}UpdateRequest extends FormRequest
             {
                 /**
                  * Get the validation rules that apply to the request.
@@ -454,9 +454,9 @@ class MakeApiCommand extends Command
         $name = $this->argument('name');
 
         $name = Str::kebab($name);
-        $routes = base_path('routes/admin.php');
+        $routes = base_path('routes/api.php');
 
-        $routeContent = "\nRoute::Apiresource('{$name}', App\Http\Controllers\Web\Admin\\{$this->argument('name')}Controller::class);";
+        $routeContent = "\nRoute::apiresource('{$name}', App\Http\Controllers\Web\Api\\{$this->argument('name')}Controller::class);";
 
         file_put_contents($routes, $routeContent, FILE_APPEND);
     }
