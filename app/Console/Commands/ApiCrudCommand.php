@@ -339,7 +339,7 @@ class ApiCrudCommand extends Command
                 public function up()
                 {
                     Schema::create('{$name}', function (Blueprint \$table) {
-                        \$table->uuid('id')->primary();
+                        \$table->id();
                         // Add your columns here
 
                         \$table->softDeletes();
