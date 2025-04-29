@@ -21,10 +21,10 @@ class ExampleController extends Controller
     {
         $this->exampleRepository = $exampleRepository;
 
-        // $this->middleware('permission:example-list', ['only' => ['index', 'getAllPaginated', 'getAllActive', 'show']]);
-        // $this->middleware('permission:example-create', ['only' => ['store']]);
-        // $this->middleware('permission:example-edit', ['only' => ['update']]);
-        // $this->middleware('permission:example-delete', ['only' => ['destroy']]);
+        $this->middleware('permission:example-list', ['only' => ['index', 'getAllPaginated', 'getAllActive', 'show']]);
+        $this->middleware('permission:example-create', ['only' => ['store']]);
+        $this->middleware('permission:example-edit', ['only' => ['update']]);
+        $this->middleware('permission:example-delete', ['only' => ['destroy']]);
     }
 
     public function index(Request $request)

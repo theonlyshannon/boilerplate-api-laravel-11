@@ -12,7 +12,7 @@ class MakeApiCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'make:crud {name}';
+    protected $signature = 'make:apiv2 {name}';
 
     /**
      * The console command description.

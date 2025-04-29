@@ -113,26 +113,4 @@ class ExampleRepository implements ExampleRepositoryInterface
             throw new Exception($e->getMessage());
         }
     }
-
-    private function saveImage($image)
-    {
-        if ($image) {
-            return $image->store('assets/example/images', 'public');
-        } else {
-            return null;
-        }
-    }
-
-    private function updateImage($oldImage, $newImage)
-    {
-        if ($newImage) {
-            if ($oldImage) {
-                Storage::disk('public')->delete($oldImage);
-            }
-
-            return $newImage->store('assets/example/images', 'public');
-        } else {
-            return $oldImage;
-        }
-    }
 }

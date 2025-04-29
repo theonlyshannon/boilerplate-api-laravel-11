@@ -12,7 +12,7 @@ class ApiCrudCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'make:api {name}';
+    protected $signature = 'make:apiv1 {name}';
 
     /**
      * The console command description.
@@ -164,7 +164,7 @@ class ApiCrudCommand extends Command
     protected function createController()
     {
         $name = $this->argument('name');
-        $this->call('make:controller', ['name' => "Store{$name}Request"]);
+        $this->call('make:controller', ['name' => "{$name}StoreRequest"]);
 
         $controllerPath = app_path("Http/Controllers/Api/{$name}Controller.php");
 
@@ -217,6 +217,23 @@ class ApiCrudCommand extends Command
                             limit: $request['limit'],
                             execute: true
                         );
+
+                        return ResponseHelper::jsonResponse(true, 'Success', __namePascalCase__Resource::collection($__nameCamelCasePlurals__), 200);
+                    } catch (\Exception $e) {
+                        return ResponseHelper::jsonResponse(false, $e->getMessage(), null, 500);
+                    }
+                }
+
+                public function getAllActive(Request $request)
+                {
+                    $request = $request->validate([
+                        'include_id' => 'nullable|integer|exists:__nameSnakeCasePlurals__,id',
+                    ]);
+
+                    try {
+                        $includeId = isset($request['include_id']) ? $request['include_id'] : null;
+
+                        $__nameCamelCasePlurals__ = $this->__nameCamelCase__Repository->getAllActive($includeId);
 
                         return ResponseHelper::jsonResponse(true, 'Success', __namePascalCase__Resource::collection($__nameCamelCasePlurals__), 200);
                     } catch (\Exception $e) {
@@ -467,7 +484,14 @@ class ApiCrudCommand extends Command
             int $rowsPerPage
         );
 
+        public function getAllActive(
+            ?string $search,
+            ?int $includeId = null
+        );
+
         public function getById(int $id, bool $withTrashed);
+
+        public function isAvailable(int $id): bool;
 
         public function create(array $data);
 
@@ -527,6 +551,23 @@ class ApiCrudCommand extends Command
             } else {
                 return $query;
             }
+        }
+
+        public function getAllActive(
+            ?string $search,
+            ?int $includeId = null
+        ) {
+            $query = $this->getAll(
+                search: $search,
+                limit: null,
+                execute: false
+            );
+
+            if ($includeId) {
+                $query = $query->orWhere('id', '=', $includeId);
+            }
+
+            return $query->get();
         }
 
         public function getAllPaginated(?string $search, int $rowsPerPage)
@@ -607,27 +648,6 @@ class ApiCrudCommand extends Command
             }
         }
 
-        private function saveImage($image)
-        {
-            if ($image) {
-                return $image->store('assets/__nameKebabCase__/images', 'public');
-            } else {
-                return null;
-            }
-        }
-
-        private function updateImage($oldImage, $newImage)
-        {
-            if ($newImage) {
-                if ($oldImage) {
-                    Storage::disk('public')->delete($oldImage);
-                }
-
-                return $newImage->store('assets/__nameKebabCase__/images', 'public');
-            } else {
-                return $oldImage;
-            }
-        }
     }
     EOT;
 
@@ -665,4 +685,638 @@ class ApiCrudCommand extends Command
 
         file_put_contents($routes, $routeContent, FILE_APPEND);
     }
+
+    protected function createTest()
+    {
+        $name = $this->argument('name');
+        $test = base_path("tests/Feature/{$name}APITest.php");
+        $testContent =
+            <<<'EOT'
+            <?php
+
+            namespace Tests\Feature;
+
+            use App\Enum\UserRoleEnum;
+            use App\Models\User;
+            use App\Models\__namePascalCase__;
+            use Illuminate\Support\Arr;
+            use Illuminate\Support\Facades\Storage;
+            use Illuminate\Support\Str;
+            use Tests\TestCase;
+
+            class __namePascalCase__APITest extends TestCase
+            {
+                public function setUp(): void
+                {
+                    parent::setUp();
+
+                    Storage::fake('public');
+                }
+
+                // 1-1
+                public function test___nameSnakeCase___api_call_index_with_super_admin_user_expect_success()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $__nameCamelCasePlurals__ = __namePascalCase__::factory(3)->create();
+
+                    $response = $this->json('GET', 'api/v1/__nameKebabCase__');
+
+                    $response->assertSuccessful();
+
+                    $resultCount = 0;
+                    foreach ($response['data'] as $data) {
+                        foreach ($__nameCamelCasePlurals__ as $__nameCamelCase__) {
+                            if ($data['id'] == $__nameCamelCase__->id) {
+                                $resultCount++;
+                            }
+                        }
+                    }
+                    $this->assertEquals($resultCount, count($__nameCamelCasePlurals__));
+                }
+
+                // 1-2-1
+                public function test___nameSnakeCase___api_call_get_all_active_without_param_id_with_super_admin_user_expect_success()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $response = $this->json('GET', 'api/v1/__nameKebabCase__/read/all-active');
+
+                    $response->assertSuccessful();
+                }
+
+                // 1-2-2
+                public function test___nameSnakeCase___api_call_get_all_active_with_existing_id_with_super_admin_user_expect_success()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    // Active
+                    $__nameCamelCase__ = __namePascalCase__::factory()->create();
+
+                    $response = $this->json('GET', 'api/v1/__nameKebabCase__/read/all-active', ['include_id' => $__nameCamelCase__->id]);
+
+                    $response->assertSuccessful();
+
+                    $responseHas__namePascalCase__ = false;
+                    foreach ($response['data'] as $data) {
+                        if ($data['id'] == $__nameCamelCase__->id) {
+                            $responseHas__namePascalCase__ = true;
+                        }
+                    }
+                    $this->assertTrue($responseHas__namePascalCase__);
+
+                    // Inactive
+                    $__nameCamelCase__ = __namePascalCase__::factory()->create([
+                        'is_active' => false
+                    ]);
+
+                    $response = $this->json('GET', 'api/v1/__nameKebabCase__/read/all-active', ['include_id' => $__nameCamelCase__->id]);
+
+                    $response->assertSuccessful();
+
+                    $responseHas__namePascalCase__ = false;
+                    foreach ($response['data'] as $data) {
+                        if ($data['id'] == $__nameCamelCase__->id) {
+                            $responseHas__namePascalCase__ = true;
+                        }
+                    }
+                    $this->assertTrue($responseHas__namePascalCase__);
+
+                    // Soft Deleted
+                    $__nameCamelCase__ = __namePascalCase__::factory()->create();
+
+                    $response = $this->json('GET', 'api/v1/__nameKebabCase__/read/all-active', ['include_id' => $__nameCamelCase__->id]);
+
+                    $response->assertSuccessful();
+
+                    $__nameCamelCase__->delete();
+
+                    $responseHas__namePascalCase__ = false;
+                    foreach ($response['data'] as $data) {
+                        if ($data['id'] == $__nameCamelCase__->id) {
+                            $responseHas__namePascalCase__ = true;
+                        }
+                    }
+                    $this->assertTrue($responseHas__namePascalCase__);
+                }
+
+                // 1-2-3
+                public function test___nameSnakeCase___api_call_get_all_active_with_invalid_id_with_super_admin_user_expect_fail()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $response = $this->json('GET', 'api/v1/__nameKebabCase__/read/all-active', ['include_id' => 0]);
+
+                    $this->assertNotEquals(200, $response->getStatusCode());
+
+                    $response = $this->json('GET', 'api/v1/__nameKebabCase__/read/all-active', ['include_id' => -1]);
+
+                    $this->assertNotEquals(200, $response->getStatusCode());
+
+                    $response = $this->json('GET', 'api/v1/__nameKebabCase__/read/all-active', ['include_id' => Str::random(5)]);
+
+                    $this->assertNotEquals(200, $response->getStatusCode());
+                }
+
+                // 1-3-1
+                public function test___nameSnakeCase___api_call_show_with_valid_id_with_super_admin_user_expect_success()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $__nameCamelCase__ = __namePascalCase__::factory()->create();
+
+                    $response = $this->json('GET', 'api/v1/__nameKebabCase__/'.$__nameCamelCase__->id);
+
+                    $response->assertSuccessful();
+
+                    $__nameCamelCase__ = Arr::except($__nameCamelCase__->toArray(), ['created_at', 'updated_at']);
+
+                    $this->assertDatabaseHas('__nameSnakeCasePlurals__', $__nameCamelCase__);
+                }
+
+                // 1-3-2
+                public function test___nameSnakeCase___api_call_show_with_invalid_id_with_super_admin_user_expect_fail()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $response = $this->json('GET', 'api/v1/__nameKebabCase__/0');
+
+                    $response->assertStatus(404);
+                }
+
+                // 1-4-1
+                public function test___nameSnakeCase___api_call_check_availability_with_valid_param_with_super_admin_user_expect_success()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    // Active
+                    $__nameCamelCase__ = __namePascalCase__::factory()->create(
+                        ['is_active' => true]
+                    );
+
+                    $response = $this->json('GET', 'api/v1/__nameKebabCase__/check-availability/'.$__nameCamelCase__->id);
+
+                    $response->assertSuccessful();
+
+                    $this->assertDatabaseHas('__nameSnakeCasePlurals__', ['id' => $__nameCamelCase__->id, 'is_active' => true]);
+
+                    // Inactive
+                    $__nameCamelCase__ = __namePascalCase__::factory()->create(
+                        ['is_active' => false]
+                    );
+
+                    $response = $this->json('GET', 'api/v1/__nameKebabCase__/check-availability/'.$__nameCamelCase__->id);
+
+                    $response->assertStatus(404);
+
+                    $this->assertDatabaseHas('__nameSnakeCasePlurals__', ['id' => $__nameCamelCase__->id, 'is_active' => false]);
+                }
+
+                // 1-4-2
+                public function test___nameSnakeCase___api_call_check_availability_with_invalid_param_with_super_admin_user_expect_fail()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $response = $this->json('GET', 'api/v1/__nameKebabCase__/check-availability/'.Str::random(5));
+
+                    $response->assertStatus(404);
+
+                    $response = $this->json('GET', 'api/v1/__nameKebabCase__/check-availability/0');
+
+                    $response->assertStatus(404);
+
+                    $response = $this->json('GET', 'api/v1/__nameKebabCase__/check-availability/-1');
+
+                    $response->assertStatus(404);
+                }
+
+                // 2-1-1
+                public function test___nameSnakeCase___api_call_create_with_super_admin_user_expect_success()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $__nameCamelCase__ = __namePascalCase__::factory()->make()->toArray();
+
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__', $__nameCamelCase__);
+
+                    $api->assertSuccessful();
+
+                    $this->assertDatabaseHas('__nameSnakeCasePlurals__', $__nameCamelCase__);
+                }
+
+                // 2-1-2
+                public function test___nameSnakeCase___api_call_create_with_existing_code_with_super_admin_user_expect_fail()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $existing__namePascalCase__ = __namePascalCase__::factory()->create();
+
+                    $new__namePascalCase__ = __namePascalCase__::factory()->make([
+                        'code' => $existing__namePascalCase__->code,
+                    ])->toArray();
+
+                    $response = $this->json('POST', '/api/v1/__nameKebabCase__', $new__namePascalCase__);
+
+                    $response->assertStatus(422);
+                }
+
+                // 2-1-3
+                public function test___nameSnakeCase___api_call_create_without_required_fields_with_super_admin_user_expect_fail()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    // Code
+                    $__nameCamelCase__ = __namePascalCase__::factory()->make(['code' => null])->toArray();
+
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__', $__nameCamelCase__);
+
+                    $api->assertStatus(422);
+
+                    $__nameCamelCase__ = __namePascalCase__::factory()->make()->toArray();
+                    unset($__nameCamelCase__['code']);
+
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__', $__nameCamelCase__);
+
+                    $api->assertStatus(422);
+                }
+
+                // 2-1-4
+                public function test___nameSnakeCase___api_call_create_without_nullable_fields_with_super_admin_user_expect_success()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    // Remarks
+                    $__nameCamelCase__ = __namePascalCase__::factory()->make(['remarks' => null])->toArray();
+
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__', $__nameCamelCase__);
+
+                    $api->assertSuccessful();
+
+                    $this->assertDatabaseHas('__nameSnakeCasePlurals__', $__nameCamelCase__);
+
+                    $__nameCamelCase__ = __namePascalCase__::factory()->make()->toArray();
+                    unset($__nameCamelCase__['remarks']);
+
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__', $__nameCamelCase__);
+
+                    $api->assertSuccessful();
+
+                    $this->assertDatabaseHas('__nameSnakeCasePlurals__', $__nameCamelCase__);
+
+                    // Is Active
+                    $__nameCamelCase__ = __namePascalCase__::factory()->make(['is_active' => null])->toArray();
+
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__', $__nameCamelCase__);
+
+                    $api->assertSuccessful();
+
+                    $__nameCamelCase__['is_active'] = true;
+
+                    $this->assertDatabaseHas('__nameSnakeCasePlurals__', $__nameCamelCase__);
+
+                    $__nameCamelCase__ = __namePascalCase__::factory()->make()->toArray();
+                    unset($__nameCamelCase__['is_active']);
+
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__', $__nameCamelCase__);
+
+                    $api->assertSuccessful();
+
+                    $__nameCamelCase__['is_active'] = true;
+
+                    $this->assertDatabaseHas('__nameSnakeCasePlurals__', $__nameCamelCase__);
+                }
+
+                // 2-1-5
+                public function test___nameSnakeCase___api_call_create_with_empty_array_with_super_admin_user_expect_fail()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $__nameCamelCase__ = [];
+
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__', $__nameCamelCase__);
+
+                    $api->assertStatus(422);
+                }
+
+                // 3-1-1
+                public function test___nameSnakeCase___api_call_update_with_super_admin_user_expect_success()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $__nameCamelCase__ = __namePascalCase__::factory()->create();
+
+                    $__nameCamelCase__Update = __namePascalCase__::factory()->make()->toArray();
+
+                    $response = $this->json('PUT', 'api/v1/__nameKebabCase__/'.$__nameCamelCase__->id, $__nameCamelCase__Update);
+
+                    $response->assertSuccessful();
+
+                    $this->assertDatabaseHas('__nameSnakeCasePlurals__', $__nameCamelCase__Update);
+                }
+
+                // 3-1-2
+                public function test___nameSnakeCase___api_call_update_with_existing_code_in_same___nameSnakeCase___with_super_admin_user_expect_success()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $existing__namePascalCase__ = __namePascalCase__::factory()->create();
+
+                    $new__namePascalCase__ = __namePascalCase__::factory()->make([
+                        'code' => $existing__namePascalCase__->code,
+                    ])->toArray();
+
+                    $response = $this->json('PUT', 'api/v1/__nameKebabCase__/'.$existing__namePascalCase__->id, $new__namePascalCase__);
+
+                    $response->assertSuccessful();
+
+                    $new__namePascalCase__ = Arr::except($new__namePascalCase__, ['created_at', 'updated_at']);
+                    $this->assertDatabaseHas('__nameSnakeCasePlurals__', $new__namePascalCase__);
+                }
+
+                // 3-1-3
+                public function test___nameSnakeCase___api_call_update_with_existing_code_in_another___nameSnakeCase___with_super_admin_user_expect_fail()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $existing__namePascalCase__ = __namePascalCase__::factory()->create();
+
+                    $new__namePascalCase__ = __namePascalCase__::factory()->create();
+
+                    $update__namePascalCase__ = __namePascalCase__::factory()->make([
+                        'code' => $existing__namePascalCase__->code,
+                    ]);
+
+                    $api = $this->json('PUT', 'api/v1/__nameKebabCase__/'.$new__namePascalCase__->id, $update__namePascalCase__->toArray());
+
+                    $api->assertStatus(422);
+                }
+
+                // 3-1-4
+                public function test___nameSnakeCase___api_call_update_without_required_fields_with_super_admin_user_expect_fail()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    // Code
+                    $__nameCamelCase__ = __namePascalCase__::factory()->create();
+
+                    $__nameCamelCase__Update = __namePascalCase__::factory()->make(['code' => null])->toArray();
+
+                    $response = $this->json('PUT', 'api/v1/__nameKebabCase__/'.$__nameCamelCase__->id, $__nameCamelCase__Update);
+
+                    $response->assertStatus(422);
+
+                    $__nameCamelCase__ = __namePascalCase__::factory()->create();
+
+                    $__nameCamelCase__Update = __namePascalCase__::factory()->make()->toArray();
+                    unset($__nameCamelCase__Update['code']);
+
+                    $response = $this->json('PUT', 'api/v1/__nameKebabCase__/'.$__nameCamelCase__->id, $__nameCamelCase__Update);
+
+                    $response->assertStatus(422);
+
+                    // Is Active
+                    $__nameCamelCase__ = __namePascalCase__::factory()->create();
+
+                    $__nameCamelCase__Update = __namePascalCase__::factory()->make(['is_active' => null])->toArray();
+
+                    $response = $this->json('PUT', 'api/v1/__nameKebabCase__/'.$__nameCamelCase__->id, $__nameCamelCase__Update);
+
+                    $response->assertStatus(422);
+
+                    $__nameCamelCase__ = __namePascalCase__::factory()->create();
+
+                    $__nameCamelCase__Update = __namePascalCase__::factory()->make()->toArray();
+                    unset($__nameCamelCase__Update['is_active']);
+
+                    $response = $this->json('PUT', 'api/v1/__nameKebabCase__/'.$__nameCamelCase__->id, $__nameCamelCase__Update);
+
+                    $response->assertStatus(422);
+                }
+
+                // 3-1-5
+                public function test___nameSnakeCase___api_call_update_without_nullable_fields_with_super_admin_user_expect_success()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    // Remarks
+                    $__nameCamelCase__ = __namePascalCase__::factory()->create();
+
+                    $__nameCamelCase__Update = __namePascalCase__::factory()->make(['remarks' => null])->toArray();
+
+                    $response = $this->json('PUT', 'api/v1/__nameKebabCase__/'.$__nameCamelCase__->id, $__nameCamelCase__Update);
+
+                    $response->assertSuccessful();
+
+                    $__nameCamelCase__Update = Arr::except($__nameCamelCase__Update, ['created_at', 'updated_at']);
+                    $this->assertDatabaseHas('__nameSnakeCasePlurals__', $__nameCamelCase__Update);
+
+                    $__nameCamelCase__ = __namePascalCase__::factory()->create();
+
+                    $__nameCamelCase__Update = __namePascalCase__::factory()->make()->toArray();
+                    unset($__nameCamelCase__Update['remarks']);
+
+                    $response = $this->json('PUT', 'api/v1/__nameKebabCase__/'.$__nameCamelCase__->id, $__nameCamelCase__Update);
+
+                    $response->assertSuccessful();
+
+                    $__nameCamelCase__Update = Arr::except($__nameCamelCase__Update, ['created_at', 'updated_at']);
+                    $this->assertDatabaseHas('__nameSnakeCasePlurals__', $__nameCamelCase__Update);
+                }
+
+                // 3-1-6
+                public function test___nameSnakeCase___api_call_update_with_invalid_id_with_super_admin_user_expect_fail()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $__nameCamelCase__ = __namePascalCase__::factory()->make()->toArray();
+
+                    $api = $this->json('PUT', 'api/v1/__nameKebabCase__/'. Str::random(5), $__nameCamelCase__);
+
+                    $api->assertStatus(404);
+                }
+
+                // 3-1-7
+                public function test___nameSnakeCase___api_call_update_with_empty_array_with_super_admin_user_expect_fail()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $__nameCamelCase__ = __namePascalCase__::factory()->create();
+
+                    $api = $this->json('PUT', 'api/v1/__nameKebabCase__/'.$__nameCamelCase__->id, []);
+
+                    $api->assertStatus(422);
+                }
+
+                // 3-2-1
+                public function test___nameSnakeCase___api_call_update_active_status_with_valid_param_and_valid_id_with_super_admin_user_expect_success()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $__nameCamelCase__ = __namePascalCase__::factory()->create([
+                        'is_active' => true
+                    ]);
+
+                    // Active
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__/active/'.$__nameCamelCase__->id, ['is_active' => true]);
+
+                    $api->assertSuccessful();
+
+                    $this->assertDatabaseHas('__nameSnakeCasePlurals__', ['id' => $__nameCamelCase__->id, 'is_active' => true]);
+
+                    // Inactive
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__/active/'.$__nameCamelCase__->id, ['is_active' => false]);
+
+                    $api->assertSuccessful();
+
+                    $this->assertDatabaseHas('__nameSnakeCasePlurals__', ['id' => $__nameCamelCase__->id, 'is_active' => false]);
+                }
+
+                // 3-2-2
+                public function test___nameSnakeCase___api_call_update_active_status_with_valid_param_and_invalid_id_with_super_admin_user_expect_fail()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__/active/'.Str::random(5), ['is_active' => mt_rand(0, 1)]);
+
+                    $api->assertStatus(404);
+
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__/active/0', ['is_active' => mt_rand(0, 1)]);
+
+                    $api->assertStatus(404);
+
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__/active/-1', ['is_active' => mt_rand(0, 1)]);
+
+                    $api->assertStatus(404);
+                }
+
+                // 3-2-3
+                public function test___nameSnakeCase___api_call_update_active_status_with_invalid_param_and_valid_id_with_super_admin_user_expect_fail()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $__nameCamelCase__ = __namePascalCase__::factory()->create([
+                        'is_active' => true
+                    ]);
+
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__/active/'.$__nameCamelCase__->id, ['is_active' => null]);
+
+                    $api->assertStatus(422);
+
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__/active/'.$__nameCamelCase__->id, ['is_active' => '']);
+
+                    $api->assertStatus(422);
+
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__/active/'.$__nameCamelCase__->id, ['is_active' => Str::random(5)]);
+
+                    $api->assertStatus(422);
+                }
+
+                // 3-2-4
+                public function test___nameSnakeCase___api_call_update_active_status_with_invalid_param_and_invalid_id_with_super_admin_user_expect_fail()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__/active/'.Str::random(5), ['is_active' => null]);
+
+                    $api->assertStatus(422);
+
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__/active/0', ['is_active' => '']);
+
+                    $api->assertStatus(422);
+
+                    $api = $this->json('POST', 'api/v1/__nameKebabCase__/active/1', ['is_active' => Str::random(5)]);
+
+                    $api->assertStatus(422);
+                }
+
+                // 4-1
+                public function test___nameSnakeCase___api_call_delete_with_valid_id_with_super_admin_user_expect_success()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $__nameCamelCase__ = __namePascalCase__::factory()->create();
+
+                    $response = $this->json('DELETE', 'api/v1/__nameKebabCase__/'.$__nameCamelCase__->id);
+
+                    $response->assertSuccessful();
+
+                    $this->assertSoftDeleted('__nameSnakeCasePlurals__', ['id' => $__nameCamelCase__->id]);
+                }
+
+                // 4-2
+                public function test___nameSnakeCase___api_call_delete_with_invalid_id_with_super_admin_user_expect_fail()
+                {
+                    $user = User::factory()->create()->assignRole(UserRoleEnum::OWNER->value);
+
+                    $this->actingAs($user);
+
+                    $response = $this->json('DELETE', 'api/v1/__nameKebabCase__/'.Str::random(5));
+
+                    $response->assertStatus(404);
+                }
+            }
+            EOT;
+        $testContent = str_replace('@name', $name.'Test', $testContent);
+        $testContent = str_replace('__namePascalCase__', $name, $testContent);
+        $testContent = str_replace('__namePascalCasePlurals__', Str::studly(Str::plural($name)), $testContent);
+        $testContent = str_replace('__nameCamelCase__', Str::camel($name), $testContent);
+        $testContent = str_replace('__nameSnakeCase__', Str::snake($name), $testContent);
+        $testContent = str_replace('__nameSnakeCasePlurals__', Str::snake(Str::plural($name)), $testContent);
+        $testContent = str_replace('__nameProperCase__', ucfirst(strtolower(preg_replace('/(?<=\\w)(?=[A-Z])/', ' ', $name))), $testContent);
+        $testContent = str_replace('__nameKebabCase__', Str::kebab($name), $testContent);
+        $testContent = str_replace('__nameCamelCasePlurals__', Str::camel(Str::plural($name)), $testContent);
+
+        file_put_contents($test, $testContent);
+    }
+
 }
